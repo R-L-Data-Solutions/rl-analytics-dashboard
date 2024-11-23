@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import numpy as np
+from scipy import stats
 
 # Page config
 st.set_page_config(
@@ -11,9 +13,67 @@ st.set_page_config(
     layout="wide"
 )
 
+# Funções de Análise
+def calcular_rfm(df):
+    """Calcula métricas RFM (Recência, Frequência, Valor Monetário)"""
+    hoje = pd.to_datetime(df['Data']).max()
+    
+    rfm = df.groupby('Cliente_ID').agg({
+        'Data': lambda x: (hoje - pd.to_datetime(x.max())).days,  # Recência
+        'Cliente_ID': 'count',  # Frequência
+        'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()  # Valor Monetário
+    }).rename(columns={
+        'Data': 'Recencia',
+        'Cliente_ID': 'Frequencia',
+        'Valor': 'Valor_Monetario'
+    })
+    
+    return rfm
+
+def analise_cesta(df):
+    """Análise de produtos frequentemente comprados juntos"""
+    df_grouped = df.groupby(['Cliente_ID', 'Data'])['Produto'].agg(list).reset_index()
+    pares = []
+    for produtos in df_grouped['Produto']:
+        if len(produtos) > 1:
+            for i in range(len(produtos)):
+                for j in range(i+1, len(produtos)):
+                    pares.append(tuple(sorted([produtos[i], produtos[j]])))
+    
+    if pares:
+        from collections import Counter
+        return pd.DataFrame(Counter(pares).most_common(10), 
+                          columns=['Par_Produtos', 'Frequencia'])
+    return pd.DataFrame()
+
+def analise_tendencias(df):
+    """Análise de tendências temporais"""
+    df['Data'] = pd.to_datetime(df['Data'])
+    vendas_diarias = df.groupby('Data').agg({
+        'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
+    }).reset_index()
+    
+    # Calcular tendência
+    X = np.arange(len(vendas_diarias))
+    y = vendas_diarias['Valor'].values
+    slope, intercept, r_value, p_value, std_err = stats.linregress(X, y)
+    
+    tendencia = 'crescente' if slope > 0 else 'decrescente'
+    confianca = r_value ** 2
+    
+    return vendas_diarias, tendencia, confianca
+
 # Title and description
 st.title("R&L Smart Analytics Dashboard")
-st.markdown("Transform your business data into actionable insights")
+st.markdown("""
+    Transform your business data into actionable insights
+    
+    Upload your sales data to discover:
+    - Customer Segmentation (RFM Analysis)
+    - Product Associations
+    - Sales Trends
+    - Performance Analytics
+""")
 
 # Sidebar
 with st.sidebar:
@@ -41,61 +101,135 @@ with st.sidebar:
 
 # Main content
 if 'df' in locals():
-    # Create three columns
-    col1, col2, col3 = st.columns(3)
+    # Métricas Principais
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_vendas = (df['Valor'] * df['Quantidade']).sum()
+    num_clientes = df['Cliente_ID'].nunique()
+    ticket_medio = total_vendas / len(df.groupby(['Cliente_ID', 'Data']))
+    taxa_fidelidade = (df['Cliente_Fidelidade'] == True).mean() * 100
     
     with col1:
         st.metric(
-            label="Total Records",
-            value=len(df),
-            delta="From your dataset"
+            label="Total Sales",
+            value=f"R$ {total_vendas:,.2f}",
+            delta="Total revenue"
         )
     
     with col2:
         st.metric(
-            label="Numeric Columns",
-            value=len(df.select_dtypes(include=['int64', 'float64']).columns),
-            delta="Available for analysis"
+            label="Unique Customers",
+            value=f"{num_clientes:,}",
+            delta="Customer base"
         )
     
     with col3:
         st.metric(
-            label="Date Columns",
-            value=len(df.select_dtypes(include=['datetime64']).columns),
-            delta="For time series"
+            label="Average Ticket",
+            value=f"R$ {ticket_medio:.2f}",
+            delta="Per transaction"
         )
     
-    # Automatic visualizations
-    st.header("Automatic Insights")
+    with col4:
+        st.metric(
+            label="Loyalty Rate",
+            value=f"{taxa_fidelidade:.1f}%",
+            delta="Of customer base"
+        )
     
-    # For numeric columns
-    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-    if len(numeric_cols) > 0:
-        st.subheader("Numeric Data Distribution")
-        selected_numeric = st.selectbox("Select column for analysis:", numeric_cols)
-        
-        fig = px.histogram(df, x=selected_numeric, title=f"Distribution of {selected_numeric}")
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Basic statistics
-        st.write("Basic Statistics:")
-        stats = df[selected_numeric].describe()
-        st.dataframe(stats)
+    # RFM Analysis
+    st.header("🎯 Customer Segmentation (RFM Analysis)")
+    rfm = calcular_rfm(df)
     
-    # For categorical columns
-    categorical_cols = df.select_dtypes(include=['object']).columns
-    if len(categorical_cols) > 0:
-        st.subheader("Categorical Data Analysis")
-        selected_cat = st.selectbox("Select categorical column:", categorical_cols)
-        
-        fig = px.pie(df, names=selected_cat, title=f"Distribution of {selected_cat}")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig = px.scatter(rfm, x='Recencia', y='Valor_Monetario', 
+                        size='Frequencia', title='Customer Segments')
         st.plotly_chart(fig, use_container_width=True)
     
-    # Correlation matrix for numeric columns
-    if len(numeric_cols) > 1:
-        st.subheader("Correlation Analysis")
-        corr_matrix = df[numeric_cols].corr()
-        fig = px.imshow(corr_matrix, title="Correlation Matrix")
+    with col2:
+        # Segmentar clientes (usando cut ao invés de qcut para evitar bins duplicados)
+        rfm['R'] = pd.cut(rfm['Recencia'], bins=3, labels=['Alta', 'Média', 'Baixa'])
+        rfm['F'] = pd.cut(rfm['Frequencia'], bins=3, labels=['Baixa', 'Média', 'Alta'])
+        rfm['M'] = pd.cut(rfm['Valor_Monetario'], bins=3, labels=['Baixo', 'Médio', 'Alto'])
+        
+        def segmentar_cliente(row):
+            if row['R'] == 'Alta' and row['F'] == 'Alta' and row['M'] == 'Alto':
+                return 'Champions'
+            elif row['R'] == 'Baixa' and row['F'] == 'Baixa':
+                return 'Lost'
+            elif row['R'] == 'Alta' and row['M'] == 'Alto':
+                return 'Loyal'
+            else:
+                return 'Regular'
+        
+        rfm['Segmento'] = rfm.apply(segmentar_cliente, axis=1)
+        fig = px.pie(rfm, names='Segmento', title='Customer Segments Distribution')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Product Analysis
+    st.header("🛒 Product Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        vendas_categoria = df.groupby('Categoria').agg({
+            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
+        }).sort_values('Valor', ascending=False)
+        
+        fig = px.bar(vendas_categoria, title='Sales by Category')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Análise de Cesta
+        pares_produtos = analise_cesta(df)
+        if not pares_produtos.empty:
+            st.subheader("Frequently Bought Together")
+            st.dataframe(pares_produtos)
+    
+    # Trend Analysis
+    st.header("📈 Trend Analysis")
+    
+    vendas_diarias, tendencia, confianca = analise_tendencias(df)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        fig = px.line(vendas_diarias, x='Data', y='Valor', 
+                     title='Daily Sales Evolution')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.metric(
+            label="Sales Trend",
+            value=tendencia.title(),
+            delta=f"Confidence: {confianca:.1%}"
+        )
+    
+    # Performance Insights
+    st.header("🎯 Performance Insights")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Performance por filial
+        vendas_filial = df.groupby('Filial').agg({
+            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
+        }).sort_values('Valor', ascending=True)
+        
+        fig = px.bar(vendas_filial, orientation='h', 
+                    title='Sales by Store')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        # Horários de pico
+        df['Hora'] = pd.to_datetime(df['Horario']).dt.hour
+        vendas_hora = df.groupby('Hora').agg({
+            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
+        })
+        
+        fig = px.line(vendas_hora, title='Sales by Hour')
         st.plotly_chart(fig, use_container_width=True)
 
 else:
@@ -103,4 +237,31 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("Made with ❤️ by R&L Data Solutions")
+
+# Seção de Contato
+st.header("🤝 Interessado na Versão Premium?")
+st.markdown("""
+    A versão premium inclui recursos avançados como:
+    - 🔮 **Previsão de Vendas** com Machine Learning
+    - 🎯 **Segmentação Avançada** de Clientes
+    - 📊 **Dashboards Personalizados**
+    - 🔄 **Integração em Tempo Real**
+    - 📱 **App Mobile**
+    - 👩‍💼 **Consultoria Especializada**
+    
+    ### Entre em Contato:
+    - 📧 Email: ronaldooliveira82@hotmail.com
+    - 📱 WhatsApp: (15) 99248-4464
+    
+    Nossa equipe terá prazer em demonstrar todas as funcionalidades premium!
+""")
+
+st.markdown("""
+    Made with ❤️ by R&L Data Solutions
+    
+    **Free Version Features:**
+    - RFM Customer Segmentation
+    - Product Association Analysis
+    - Trend Detection
+    - Performance Analytics
+""")
