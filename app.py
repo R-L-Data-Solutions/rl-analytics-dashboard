@@ -13,6 +13,40 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom CSS para o logo
+st.markdown("""
+    <style>
+    .logo-container {
+        text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(90deg, #1E88E5 0%, #005CAB 100%);
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .company-name {
+        font-size: 3.5rem;
+        font-weight: bold;
+        color: white;
+        margin: 0;
+    }
+    .tagline {
+        font-size: 1.2rem;
+        color: #E0E0E0;
+        margin-top: 0.5rem;
+    }
+    .logo-symbol {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    </style>
+    
+    <div class="logo-container">
+        <div class="logo-symbol">🔄📊</div>
+        <div class="company-name">R&L Data Solutions</div>
+        <div class="tagline">Transformando Dados em Resultados</div>
+    </div>
+""", unsafe_allow_html=True)
+
 # Funções de Análise
 def calcular_rfm(df):
     """Calcula métricas RFM (Recência, Frequência, Valor Monetário)"""
