@@ -45,8 +45,8 @@ We combine decades of business experience with cutting-edge technology to delive
 
 ### 📫 Contact
 
-- Email: [seu-email@rl-data.com]
-- LinkedIn: [R&L Data Solutions]
+- Email: ronaldooliveira82@hotmail.com
+- LinkedIn: https://www.linkedin.com/in/ronaldo-pereira-2a71b914a/
 - Website: [em breve]
 
 ### 📝 License
