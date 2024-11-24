@@ -1,54 +1,47 @@
-# R&L Data Solutions
+# R&L Smart Analytics Dashboard
 
-## Smart Analytics Dashboard
+🚀 Transformando dados em resultados | Analytics & BI Solutions
 
-![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg)
-![Streamlit](https://img.shields.io/badge/streamlit-1.28+-red.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+## Sobre
+Dashboard de análise de dados desenvolvido pela R&L Data Solutions, oferecendo insights automáticos e visualizações interativas para tomada de decisões baseada em dados.
 
-Transform your business data into actionable insights with R&L Data Solutions' Smart Analytics Dashboard.
+## Funcionalidades
+- 📊 Análise RFM de clientes
+- 🎯 Segmentação automática
+- 📈 Detecção de tendências
+- 💡 Insights de performance
+- 🔄 Visualizações interativas
 
-### 🚀 Features
-
-- **Interactive Dashboards**: Real-time data visualization
-- **Automated Analysis**: Quick insights from your data
-- **Business Intelligence**: KPIs and metrics that matter
-- **Easy Integration**: Works with CSV, Excel, and database sources
-
-### 🛠️ Tech Stack
-
-- Python 3.9+
-- Streamlit
-- Pandas
-- Plotly
-- SQLite
-
-### 📊 Quick Start
-
+## Instalação
 ```bash
-# Clone the repository
-git clone https://github.com/R-L-Data-Solutions/rl-analytics-dashboard.git
-
-# Navigate to project directory
-cd rl-analytics-dashboard
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the dashboard
 streamlit run app.py
 ```
 
-### 🤝 About R&L Data Solutions
+## Uso
+1. Execute o dashboard
+2. Faça upload de seu arquivo CSV/Excel
+3. Explore os insights automáticos
+4. Interaja com as visualizações
 
-We combine decades of business experience with cutting-edge technology to deliver practical, data-driven solutions for your business.
+## Contribuições
+Contribuições são bem-vindas! Se você tem uma sugestão para melhorar este projeto:
 
-### 📫 Contact
+1. Faça um Fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add: nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-- Email: ronaldooliveira82@hotmail.com
-- LinkedIn: https://www.linkedin.com/in/ronaldo-pereira-2a71b914a/
-- Website: [em breve]
+**Importante**: Este projeto é open source sob a licença MIT, mas requer atribuição. Qualquer uso ou modificação deve incluir os devidos créditos à R&L Data Solutions.
 
-### 📝 License
+## Licença
+MIT License - Copyright (c) 2024 R&L Data Solutions
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Créditos
+Desenvolvido por R&L Data Solutions
+- GitHub: https://github.com/R-L-Data-Solutions
+- Contato: ronaldooliveira82@hotmail.com
+
+---
+Made with ❤️ by R&L Data Solutions
