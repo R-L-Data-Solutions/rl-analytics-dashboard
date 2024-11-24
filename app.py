@@ -13,59 +13,63 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS para o logo
+# Custom CSS
 st.markdown("""
-    <style>
-    .logo-container {
-        text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(90deg, #1E88E5 0%, #005CAB 100%);
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
-    .company-name {
-        font-size: 3.5rem;
-        font-weight: bold;
-        color: white;
-        margin: 0;
-    }
-    .tagline {
-        font-size: 1.2rem;
-        color: #E0E0E0;
-        margin-top: 0.5rem;
-    }
-    .logo-symbol {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-    }
-    </style>
-    
-    <div class="logo-container">
-        <div class="logo-symbol">🔄📊</div>
-        <div class="company-name">R&L Data Solutions</div>
-        <div class="tagline">Transformando Dados em Resultados</div>
-    </div>
+<style>
+[data-testid="stSidebar"][aria-expanded="true"] {
+    min-width: 300px;
+    max-width: 400px;
+}
+.logo-container {
+    background: linear-gradient(90deg, #1E88E5 0%, #005CAB 100%);
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.logo-symbol {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: white;
+}
+.company-name {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+.tagline {
+    color: #E0E0E0;
+    font-size: 1.5rem;
+    margin-top: 0.5rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Logo and Header
+st.markdown("""
+<div class="logo-container">
+    <div class="logo-symbol">🔄📊</div>
+    <div class="company-name">R&L Data Solutions</div>
+    <div class="tagline">Análise Inteligente R&L</div>
+</div>
 """, unsafe_allow_html=True)
 
 # Funções de Análise
 def calcular_rfm(df):
-    """Calcula métricas RFM (Recência, Frequência, Valor Monetário)"""
     hoje = pd.to_datetime(df['Data']).max()
-    
     rfm = df.groupby('Cliente_ID').agg({
-        'Data': lambda x: (hoje - pd.to_datetime(x.max())).days,  # Recência
-        'Cliente_ID': 'count',  # Frequência
-        'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()  # Valor Monetário
+        'Data': lambda x: (hoje - pd.to_datetime(x.max())).days,
+        'Cliente_ID': 'count',
+        'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
     }).rename(columns={
         'Data': 'Recencia',
         'Cliente_ID': 'Frequencia',
         'Valor': 'Valor_Monetario'
     })
-    
     return rfm
 
 def analise_cesta(df):
-    """Análise de produtos frequentemente comprados juntos"""
     df_grouped = df.groupby(['Cliente_ID', 'Data'])['Produto'].agg(list).reset_index()
     pares = []
     for produtos in df_grouped['Produto']:
@@ -81,13 +85,11 @@ def analise_cesta(df):
     return pd.DataFrame()
 
 def analise_tendencias(df):
-    """Análise de tendências temporais"""
     df['Data'] = pd.to_datetime(df['Data'])
     vendas_diarias = df.groupby('Data').agg({
         'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
     }).reset_index()
     
-    # Calcular tendência
     X = np.arange(len(vendas_diarias))
     y = vendas_diarias['Valor'].values
     slope, intercept, r_value, p_value, std_err = stats.linregress(X, y)
@@ -96,18 +98,6 @@ def analise_tendencias(df):
     confianca = r_value ** 2
     
     return vendas_diarias, tendencia, confianca
-
-# Title and description
-st.title("R&L Smart Analytics Dashboard")
-st.markdown("""
-    Transform your business data into actionable insights
-    
-    Upload your sales data to discover:
-    - Customer Segmentation (RFM Analysis)
-    - Product Associations
-    - Sales Trends
-    - Performance Analytics
-""")
 
 # Sidebar
 with st.sidebar:
@@ -125,7 +115,6 @@ with st.sidebar:
             st.write("Data Preview:")
             st.dataframe(df.head())
             
-            # Data info
             st.write("Dataset Info:")
             st.write(f"Rows: {df.shape[0]}")
             st.write(f"Columns: {df.shape[1]}")
@@ -134,42 +123,23 @@ with st.sidebar:
             st.error(f"Error loading file: {str(e)}")
 
 # Main content
-if 'df' in locals():
+if 'uploaded_file' in locals() and uploaded_file is not None:
     # Métricas Principais
     col1, col2, col3, col4 = st.columns(4)
     
     total_vendas = (df['Valor'] * df['Quantidade']).sum()
     num_clientes = df['Cliente_ID'].nunique()
     ticket_medio = total_vendas / len(df.groupby(['Cliente_ID', 'Data']))
-    taxa_fidelidade = (df['Cliente_Fidelidade'] == True).mean() * 100
+    taxa_fidelidade = len(df[df['Cliente_ID'].duplicated()]) / len(df) * 100
     
     with col1:
-        st.metric(
-            label="Total Sales",
-            value=f"R$ {total_vendas:,.2f}",
-            delta="Total revenue"
-        )
-    
+        st.metric("Total Sales", f"R$ {total_vendas:,.2f}")
     with col2:
-        st.metric(
-            label="Unique Customers",
-            value=f"{num_clientes:,}",
-            delta="Customer base"
-        )
-    
+        st.metric("Unique Customers", f"{num_clientes:,}")
     with col3:
-        st.metric(
-            label="Average Ticket",
-            value=f"R$ {ticket_medio:.2f}",
-            delta="Per transaction"
-        )
-    
+        st.metric("Average Ticket", f"R$ {ticket_medio:.2f}")
     with col4:
-        st.metric(
-            label="Loyalty Rate",
-            value=f"{taxa_fidelidade:.1f}%",
-            delta="Of customer base"
-        )
+        st.metric("Loyalty Rate", f"{taxa_fidelidade:.1f}%")
     
     # RFM Analysis
     st.header("🎯 Customer Segmentation (RFM Analysis)")
@@ -183,10 +153,21 @@ if 'df' in locals():
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Segmentar clientes (usando cut ao invés de qcut para evitar bins duplicados)
-        rfm['R'] = pd.cut(rfm['Recencia'], bins=3, labels=['Alta', 'Média', 'Baixa'])
-        rfm['F'] = pd.cut(rfm['Frequencia'], bins=3, labels=['Baixa', 'Média', 'Alta'])
-        rfm['M'] = pd.cut(rfm['Valor_Monetario'], bins=3, labels=['Baixo', 'Médio', 'Alto'])
+        # Usando qcut com tratamento de duplicatas
+        try:
+            rfm['R'] = pd.qcut(rfm['Recencia'], q=3, labels=['Alta', 'Média', 'Baixa'], duplicates='drop')
+        except ValueError:
+            rfm['R'] = pd.cut(rfm['Recencia'], bins=3, labels=['Alta', 'Média', 'Baixa'])
+            
+        try:
+            rfm['F'] = pd.qcut(rfm['Frequencia'], q=3, labels=['Baixa', 'Média', 'Alta'], duplicates='drop')
+        except ValueError:
+            rfm['F'] = pd.cut(rfm['Frequencia'], bins=3, labels=['Baixa', 'Média', 'Alta'])
+            
+        try:
+            rfm['M'] = pd.qcut(rfm['Valor_Monetario'], q=3, labels=['Baixo', 'Médio', 'Alto'], duplicates='drop')
+        except ValueError:
+            rfm['M'] = pd.cut(rfm['Valor_Monetario'], bins=3, labels=['Baixo', 'Médio', 'Alto'])
         
         def segmentar_cliente(row):
             if row['R'] == 'Alta' and row['F'] == 'Alta' and row['M'] == 'Alto':
@@ -199,75 +180,41 @@ if 'df' in locals():
                 return 'Regular'
         
         rfm['Segmento'] = rfm.apply(segmentar_cliente, axis=1)
-        fig = px.pie(rfm, names='Segmento', title='Customer Segments Distribution')
+        
+        segmentos = rfm['Segmento'].value_counts()
+        fig = px.pie(values=segmentos.values, names=segmentos.index,
+                    title='Customer Segments Distribution')
         st.plotly_chart(fig, use_container_width=True)
+    
+    # Sales Trends
+    st.header("📈 Sales Trends")
+    vendas_diarias, tendencia, confianca = analise_tendencias(df)
+    
+    fig = px.line(vendas_diarias, x='Data', y='Valor',
+                  title=f'Sales Evolution (Trend: {tendencia}, R² = {confianca:.2f})')
+    st.plotly_chart(fig, use_container_width=True)
     
     # Product Analysis
     st.header("🛒 Product Analysis")
+    produtos_populares = df.groupby('Produto')['Quantidade'].sum().sort_values(ascending=False)
     
-    col1, col2 = st.columns(2)
+    fig = px.bar(x=produtos_populares.head(10).index, y=produtos_populares.head(10).values,
+                 title='Top 10 Products by Sales Volume')
+    st.plotly_chart(fig, use_container_width=True)
     
-    with col1:
-        vendas_categoria = df.groupby('Categoria').agg({
-            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
-        }).sort_values('Valor', ascending=False)
-        
-        fig = px.bar(vendas_categoria, title='Sales by Category')
+    # Basket Analysis
+    st.header("🧺 Basket Analysis")
+    cesta = analise_cesta(df)
+    if not cesta.empty:
+        fig = px.bar(cesta, x='Frequencia', y='Par_Produtos',
+                    title='Most Common Product Pairs',
+                    orientation='h')
         st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Análise de Cesta
-        pares_produtos = analise_cesta(df)
-        if not pares_produtos.empty:
-            st.subheader("Frequently Bought Together")
-            st.dataframe(pares_produtos)
-    
-    # Trend Analysis
-    st.header("📈 Trend Analysis")
-    
-    vendas_diarias, tendencia, confianca = analise_tendencias(df)
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        fig = px.line(vendas_diarias, x='Data', y='Valor', 
-                     title='Daily Sales Evolution')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.metric(
-            label="Sales Trend",
-            value=tendencia.title(),
-            delta=f"Confidence: {confianca:.1%}"
-        )
-    
-    # Performance Insights
-    st.header("🎯 Performance Insights")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Performance por filial
-        vendas_filial = df.groupby('Filial').agg({
-            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
-        }).sort_values('Valor', ascending=True)
-        
-        fig = px.bar(vendas_filial, orientation='h', 
-                    title='Sales by Store')
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Horários de pico
-        df['Hora'] = pd.to_datetime(df['Horario']).dt.hour
-        vendas_hora = df.groupby('Hora').agg({
-            'Valor': lambda x: (x * df.loc[x.index, 'Quantidade']).sum()
-        })
-        
-        fig = px.line(vendas_hora, title='Sales by Hour')
-        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Not enough data for basket analysis")
 
 else:
-    st.info("👈 Please upload a data file in the sidebar to begin analysis")
+    st.info("Please upload your data file to start the analysis")
 
 # Footer
 st.markdown("---")
